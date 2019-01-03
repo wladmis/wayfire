@@ -209,6 +209,14 @@ bool input_manager::input_grabbed()
     return active_grab || !session_active;
 }
 
+int input_manager::get_num_inputs()
+{
+    int count = pressed_buttons.size();
+    if (our_touch)
+        count += our_touch->gesture_recognizer.current.size();
+    return count;
+}
+
 void input_manager::toggle_session()
 {
 

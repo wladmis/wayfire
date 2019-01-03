@@ -4,6 +4,7 @@
 #include <unordered_set>
 #include <map>
 #include <vector>
+#include <set>
 
 #include "seat.hpp"
 #include "cursor.hpp"
@@ -91,9 +92,11 @@ class input_manager
         /* TODO: move this in a wf_keyboard struct,
          * This might not work with multiple keyboards */
         bool in_mod_binding = false;
-        int count_other_inputs = 0;
-        std::vector<std::function<void()>> match_keys(uint32_t mods, uint32_t key);
+        std::set<uint32_t> pressed_buttons;
+        /* Return the number of pressed buttons and touch fingers */
+        int get_num_inputs();
 
+        std::vector<std::function<void()>> match_keys(uint32_t mods, uint32_t key);
         wayfire_view keyboard_focus;
 
     public:

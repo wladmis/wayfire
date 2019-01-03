@@ -204,7 +204,7 @@ bool input_manager::handle_keyboard_key(uint32_t key, uint32_t state)
         /* as long as we have pressed only modifiers, we should check for modifier bindings on release */
         if (mod)
         {
-            bool modifiers_only = !count_other_inputs;
+            bool modifiers_only = (get_num_inputs() == 0);
             for (size_t i = 0; i < kbd->num_keycodes; i++)
                 if (!mod_from_key(kbd->keycodes[i]))
                     modifiers_only = false;

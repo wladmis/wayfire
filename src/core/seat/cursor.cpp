@@ -41,7 +41,7 @@ void input_manager::handle_pointer_button(wlr_event_pointer_button *ev)
 
     if (ev->state == WLR_BUTTON_PRESSED)
     {
-        count_other_inputs++;
+        pressed_buttons.insert(ev->button);
 
         GetTuple(gx, gy, core->get_cursor_position());
         auto output = core->get_output_at(gx, gy);
@@ -76,7 +76,7 @@ void input_manager::handle_pointer_button(wlr_event_pointer_button *ev)
     }
     else
     {
-        count_other_inputs--;
+        pressed_buttons.erase(ev->button);
     }
 
     if (active_grab)
@@ -100,8 +100,18 @@ void input_manager::update_cursor_focus(wayfire_surface_t *focus, int x, int y)
     if (compositor_surface)
         compositor_surface->on_pointer_leave();
 
-    if (cursor_focus != focus)
+    bool focus_changed = (cursor_focus != focus);
+    if (focus_changed)
+    {
+        /* Release pressed buttons, so that they don't remain stuck in the client */
+        for (uint32_t button : pressed_buttons)
+        {
+            wlr_seat_pointer_notify_button(seat, get_current_time(),
+                button, WLR_BUTTON_RELEASED);
+        }
+
         log_info("change cursor focus %p -> %p", cursor_focus, focus);
+    }
 
     cursor_focus = focus;
     if (focus && !wf_compositor_surface_from_surface(focus))
@@ -114,6 +124,16 @@ void input_manager::update_cursor_focus(wayfire_surface_t *focus, int x, int y)
 
     if ((compositor_surface = wf_compositor_surface_from_surface(focus)))
         compositor_surface->on_pointer_enter(x, y);
+
+    /* Send all currently pressed buttons to the new client */
+    if (focus_changed)
+    {
+        for (uint32_t button : pressed_buttons)
+        {
+            wlr_seat_pointer_notify_button(seat, get_current_time(),
+                button, WLR_BUTTON_PRESSED);
+        }
+    }
 }
 
 void input_manager::update_cursor_position(uint32_t time_msec, bool real_update)
