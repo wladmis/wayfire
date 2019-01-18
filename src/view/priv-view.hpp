@@ -19,8 +19,9 @@ void init_xwayland();
 void init_layer_shell();
 
 struct wlr_seat;
-void xwayland_set_seat(wlr_seat *seat);
-std::string xwayland_get_display();
+void wf_xwayland_set_seat(wlr_seat *seat);
+std::string wf_xwayland_get_display();
+void wf_xwayland_deinit();
 
 void init_desktop_apis();
 

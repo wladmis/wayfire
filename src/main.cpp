@@ -220,12 +220,13 @@ int main(int argc, char *argv[])
     log_info ("running at server %s", server_name);
     setenv("WAYLAND_DISPLAY", server_name, 1);
 
-    xwayland_set_seat(core->get_current_seat());
+    wf_xwayland_set_seat(core->get_current_seat());
     core->wake();
 
     wl_display_run(core->display);
 
-    wlr_backend_destroy(core->backend);
+    wf_xwayland_deinit();
+    wl_display_destroy_clients(core->display);
     wl_display_destroy(core->display);
 
     return EXIT_SUCCESS;

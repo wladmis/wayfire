@@ -599,7 +599,7 @@ void init_xwayland()
 #endif
 }
 
-void xwayland_set_seat(wlr_seat *seat)
+void wf_xwayland_set_seat(wlr_seat *seat)
 {
 #if WLR_HAS_XWAYLAND
     if (xwayland_handle)
@@ -607,11 +607,18 @@ void xwayland_set_seat(wlr_seat *seat)
 #endif
 }
 
-std::string xwayland_get_display()
+std::string wf_xwayland_get_display()
 {
 #if WLR_HAS_XWAYLAND
     return std::to_string(xwayland_handle ? xwayland_handle->display : -1);
 #else
     return "-1";
+#endif
+}
+
+void wf_xwayland_deinit()
+{
+#if WLR_HAS_WAYLAND
+    wlr_xwayland_destroy(xwayland_handle);
 #endif
 }

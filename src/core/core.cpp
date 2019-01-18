@@ -530,7 +530,7 @@ void wayfire_core::run(const char *command)
         if (!fork()) {
             setenv("WAYLAND_DISPLAY", wayland_display.c_str(), 1);
 #if WLR_HAS_XWAYLAND
-            auto xdisp = ":" + xwayland_get_display();
+            auto xdisp = ":" + wf_xwayland_get_display();
             setenv("DISPLAY", xdisp.c_str(), 1);
 #endif
             int dev_null = open("/dev/null", O_WRONLY);
