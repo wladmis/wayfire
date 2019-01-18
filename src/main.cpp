@@ -224,6 +224,8 @@ int main(int argc, char *argv[])
     core->wake();
 
     wl_display_run(core->display);
+
+    wlr_backend_destroy(core->backend);
     wl_display_destroy(core->display);
 
     return EXIT_SUCCESS;
