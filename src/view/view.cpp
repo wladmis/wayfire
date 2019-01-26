@@ -22,6 +22,7 @@ extern "C"
 #include <wlr/config.h>
 #include <wlr/render/wlr_renderer.h>
 #include <wlr/types/wlr_matrix.h>
+#include <wlr/types/wlr_wl_shell.h>
 #include <wlr/util/region.h>
 #undef static
 }
@@ -1217,4 +1218,6 @@ void init_desktop_apis()
     init_layer_shell();
     init_xdg_shell_v6();
     init_xwayland();
+
+    wlr_wl_shell_create(core->display);
 }
