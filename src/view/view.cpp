@@ -19,12 +19,14 @@
 extern "C"
 {
 #define static
+#define class class_t
 #include <wlr/config.h>
 #include <wlr/render/wlr_renderer.h>
 #include <wlr/types/wlr_matrix.h>
 #include <wlr/types/wlr_wl_shell.h>
 #include <wlr/util/region.h>
 #undef static
+#undef class
 }
 
 /* TODO: clean up the code, currently it is a horrible mess
