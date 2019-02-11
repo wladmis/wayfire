@@ -37,6 +37,7 @@ struct wlr_idle_inhibit_manager_v1;
 struct wlr_screencopy_manager_v1;
 struct wlr_foreign_toplevel_manager_v1;
 struct wlr_pointer_gestures_v1;
+struct wlr_relative_pointer_manager_v1;
 
 #include <wayland-server.h>
 }
@@ -106,6 +107,7 @@ class wayfire_core : public wf_object_base
             wlr_idle_inhibit_manager_v1 *idle_inhibit;
             wlr_foreign_toplevel_manager_v1 *toplevel_manager;
             wlr_pointer_gestures_v1 *pointer_gestures;
+            wlr_relative_pointer_manager_v1 *relative_pointer;
             wayfire_shell *wf_shell;
             wf_gtk_shell *gtk_shell;
         } protocols;

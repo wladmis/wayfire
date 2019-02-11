@@ -5,6 +5,11 @@
 #include "debug.hpp"
 #include "compositor-surface.hpp"
 
+extern "C"
+{
+#include <wlr/types/wlr_relative_pointer_v1.h>
+}
+
 static void handle_pointer_button_cb(wl_listener*, void *data)
 {
     auto ev = static_cast<wlr_event_pointer_button*> (data);
@@ -215,12 +220,24 @@ void input_manager::handle_pointer_motion(wlr_event_pointer_motion *ev)
         active_grab->callbacks.pointer.relative_motion(ev);
 
     wlr_cursor_move(cursor->cursor, ev->device, ev->delta_x, ev->delta_y);
+    wlr_relative_pointer_manager_v1_send_relative_motion(
+        core->protocols.relative_pointer, seat, (uint64_t)ev->time_msec * 1000,
+        ev->delta_x, ev->delta_y, ev->unaccel_dx, ev->unaccel_dy);
     update_cursor_position(ev->time_msec);
 }
 
 void input_manager::handle_pointer_motion_absolute(wlr_event_pointer_motion_absolute *ev)
 {
+    double ox = cursor->cursor->x;
+    double oy = cursor->cursor->y;
     wlr_cursor_warp_absolute(cursor->cursor, ev->device, ev->x, ev->y);
+
+    double dx = cursor->cursor->x - ox;
+    double dy = cursor->cursor->y - oy;
+    wlr_relative_pointer_manager_v1_send_relative_motion(
+        core->protocols.relative_pointer, seat, (uint64_t)ev->time_msec * 1000,
+        dx, dy, dx, dy);
+
     update_cursor_position(ev->time_msec);
 }
 
