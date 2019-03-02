@@ -141,7 +141,6 @@ bool input_manager::handle_pointer_button(wlr_event_pointer_button *ev)
     {
         if (active_grab->callbacks.pointer.button)
             active_grab->callbacks.pointer.button(ev->button, ev->state);
-        return true;
     }
     else if (cursor_focus)
     {
