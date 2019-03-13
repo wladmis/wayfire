@@ -2,6 +2,7 @@
 #define TOUCH_HPP
 
 #include <map>
+#include "view.hpp"
 
 extern "C"
 {
@@ -43,6 +44,11 @@ struct wf_touch
 
     wf_touch(wlr_cursor *cursor);
     void add_device(wlr_input_device *device);
+
+    int count_touch_down = 0;
+    wayfire_surface_t *grabbed_surface = nullptr;
+    void start_touch_down_grab(wayfire_surface_t *surface);
+    void end_touch_down_grab();
 };
 
 #endif /* end of include guard: TOUCH_HPP */

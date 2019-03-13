@@ -63,7 +63,6 @@ void wf_gesture_recognizer::continue_gesture(int id, int sx, int sy)
 
     /* first case - consider swipe, we go through each
      * of the directions and check whether such swipe has occured */
-
     bool is_left_swipe = true, is_right_swipe = true,
          is_up_swipe = true, is_down_swipe = true;
 
@@ -265,6 +264,20 @@ void wf_touch::add_device(wlr_input_device *device)
     wlr_cursor_attach_input_device(cursor, device);
 }
 
+void wf_touch::start_touch_down_grab(wayfire_surface_t *surface)
+{
+    grabbed_surface = surface;
+}
+
+void wf_touch::end_touch_down_grab()
+{
+    if (grabbed_surface)
+    {
+        grabbed_surface = nullptr;
+        core->input->update_cursor_position(get_current_time(), false);
+    }
+}
+
 /* input_manager touch functions */
 void input_manager::set_touch_focus(wayfire_surface_t *surface, uint32_t time, int id, int x, int y)
 {
@@ -302,9 +315,12 @@ void input_manager::set_touch_focus(wayfire_surface_t *surface, uint32_t time, i
 void input_manager::handle_touch_down(uint32_t time, int32_t id, int32_t x, int32_t y)
 {
     mod_binding_key = 0;
-    auto wo = core->get_output_at(x, y);
-    core->focus_output(wo);
+    ++our_touch->count_touch_down;
 
+    if (our_touch->count_touch_down == 1)
+        core->focus_output(core->get_output_at(x, y));
+
+    auto wo = core->get_active_output();
     auto og = wo->get_layout_geometry();
     int ox = x - og.x;
     int oy = y - og.y;
@@ -322,14 +338,26 @@ void input_manager::handle_touch_down(uint32_t time, int32_t id, int32_t x, int3
 
     int lx, ly;
     auto focus = input_surface_at(x, y, lx, ly);
+    if (our_touch->count_touch_down == 1)
+    {
+        our_touch->start_touch_down_grab(focus);
+    } else if (our_touch->grabbed_surface && !drag_icon)
+    {
+        focus = our_touch->grabbed_surface;
+        /* XXX: we assume the output won't change ever since grab started */
+        auto local = our_touch->grabbed_surface->get_relative_position({ox, oy});
+        lx = local.x;
+        ly = local.y;
+    }
+
     set_touch_focus(focus, time, id, lx, ly);
     update_drag_icon();
-
     check_touch_bindings(ox, oy);
 }
 
 void input_manager::handle_touch_up(uint32_t time, int32_t id)
 {
+    --our_touch->count_touch_down;
     if (active_grab)
     {
         if (active_grab->callbacks.touch.up)
@@ -354,8 +382,24 @@ void input_manager::handle_touch_motion(uint32_t time, int32_t id, int32_t x, in
     }
 
     int lx, ly;
-    auto surface = input_surface_at(x, y, lx, ly);
-    set_touch_focus(surface, time, id, lx, ly);
+    wayfire_surface_t *surface = nullptr;
+
+    /* Same as cursor motion handling: make sure we send to the grabbed surface,
+     * except if we need this for DnD */
+    if (our_touch->grabbed_surface && !drag_icon)
+    {
+        surface = our_touch->grabbed_surface;
+        auto og = surface->get_output()->get_layout_geometry();
+        auto local = surface->get_relative_position({x - og.x, y - og.y});
+
+        lx = local.x;
+        ly = local.y;
+    } else
+    {
+        surface = input_surface_at(x, y, lx, ly);
+        set_touch_focus(surface, time, id, lx, ly);
+    }
+
     wlr_seat_touch_notify_motion(seat, time, id, lx, ly);
 
     update_drag_icon();
