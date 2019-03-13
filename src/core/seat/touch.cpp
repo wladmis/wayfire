@@ -274,7 +274,11 @@ void wf_touch::end_touch_down_grab()
     if (grabbed_surface)
     {
         grabbed_surface = nullptr;
-        core->input->update_cursor_position(get_current_time(), false);
+        for (auto& f : gesture_recognizer.current)
+        {
+            core->input->handle_touch_motion(get_current_time(),
+                f.first, f.second.sx, f.second.sy);
+        }
     }
 }
 
@@ -358,6 +362,9 @@ void input_manager::handle_touch_down(uint32_t time, int32_t id, int32_t x, int3
 void input_manager::handle_touch_up(uint32_t time, int32_t id)
 {
     --our_touch->count_touch_down;
+    if (our_touch->count_touch_down == 0)
+        our_touch->end_touch_down_grab();
+
     if (active_grab)
     {
         if (active_grab->callbacks.touch.up)
@@ -383,7 +390,6 @@ void input_manager::handle_touch_motion(uint32_t time, int32_t id, int32_t x, in
 
     int lx, ly;
     wayfire_surface_t *surface = nullptr;
-
     /* Same as cursor motion handling: make sure we send to the grabbed surface,
      * except if we need this for DnD */
     if (our_touch->grabbed_surface && !drag_icon)
@@ -401,7 +407,6 @@ void input_manager::handle_touch_motion(uint32_t time, int32_t id, int32_t x, in
     }
 
     wlr_seat_touch_notify_motion(seat, time, id, lx, ly);
-
     update_drag_icon();
 
     auto compositor_surface = wf_compositor_surface_from_surface(touch_focus);

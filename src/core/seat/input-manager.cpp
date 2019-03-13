@@ -130,6 +130,9 @@ input_manager::input_manager()
 
         if (our_touch)
         {
+            if (our_touch->grabbed_surface == ev->surface && !ev->surface->is_mapped())
+                our_touch->end_touch_down_grab();
+
             for (auto f : our_touch->gesture_recognizer.current)
                 handle_touch_motion(get_current_time(), f.first, f.second.sx, f.second.sy);
         }
