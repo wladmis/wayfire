@@ -1,4 +1,5 @@
 #include "cursor.hpp"
+#include "touch.hpp"
 #include "core.hpp"
 #include "input-manager.hpp"
 #include "workspace-manager.hpp"
@@ -142,6 +143,8 @@ bool input_manager::handle_pointer_button(wlr_event_pointer_button *ev)
     else
     {
         cursor->count_pressed_buttons--;
+        if (cursor->count_pressed_buttons == 0)
+            cursor->end_held_grab();
     }
 
     if (active_grab)
@@ -189,17 +192,37 @@ void input_manager::update_cursor_focus(wayfire_surface_t *focus, int x, int y)
 void input_manager::update_cursor_position(uint32_t time_msec, bool real_update)
 {
     GetTuple(x, y, core->get_cursor_position());
-    if (input_grabbed() && real_update)
+    if (input_grabbed())
     {
         GetTuple(sx, sy, core->get_active_output()->get_cursor_position());
-        if (active_grab->callbacks.pointer.motion)
+        if (active_grab->callbacks.pointer.motion && real_update)
             active_grab->callbacks.pointer.motion(sx, sy);
+
         return;
     }
 
     int lx, ly;
-    wayfire_surface_t *new_focus = input_surface_at(x, y, lx, ly);
-    update_cursor_focus(new_focus, lx, ly);
+    wayfire_surface_t *new_focus = nullptr;
+    /* If we have a grabbed surface, but no drag, we want to continue sending
+     * events to the grabbed surface, even if the pointer goes outside of it.
+     * This enables Xwayland DnD to work correctly, and also lets the user for
+     * ex. grab a scrollbar and move their mouse freely.
+     *
+     * Notice in case of active wayland DnD we need to send events to the surfaces
+     * which are actually under the mouse */
+    if (cursor->grabbed_surface && !this->drag_icon)
+    {
+        new_focus = cursor->grabbed_surface;
+        GetTuple(ox, oy, cursor->grabbed_surface->get_output()->get_cursor_position());
+        auto local = cursor->grabbed_surface->get_relative_position({ox, oy});
+
+        lx = local.x;
+        ly = local.y;
+    } else
+    {
+        new_focus = input_surface_at(x, y, lx, ly);
+        update_cursor_focus(new_focus, lx, ly);
+    }
 
     auto compositor_surface = wf_compositor_surface_from_surface(new_focus);
     if (compositor_surface)
@@ -408,73 +431,18 @@ void wf_cursor::set_cursor(wlr_seat_pointer_request_set_cursor_event *ev)
         wlr_cursor_set_surface(cursor, ev->surface, ev->hotspot_x, ev->hotspot_y);
 }
 
-/* When a button is pressed, we start a grab until it is released. This is
- * needed to ensure that the window will still receive events even if the
- * pointer goes outside of the window - input-manager will by default send
- * events directly to the window underneath the cursor.
- *
- * This grab ends itself whenever all buttons are released. In addition, the
- * grab can also be ended if a DnD action starts */
-static void button_held_grab_enter(wlr_seat_pointer_grab *grab,
-    wlr_surface *surface, double sx, double sy)
-{ /* no-op, ignore input-manager trying to change focus */ }
-
-static void button_held_grab_motion(wlr_seat_pointer_grab *grab,
-    uint32_t time_msec, double sx, double sy)
-{
-    auto surface = core->input->cursor->grabbed_surface;
-    GetTuple(px, py, surface->get_output()->get_cursor_position());
-
-    auto local = surface->get_relative_position({px, py});
-    wlr_seat_pointer_send_motion(grab->seat, time_msec, local.x, local.y);
-}
-
-static uint32_t button_held_grab_button(wlr_seat_pointer_grab *grab,
-    uint32_t time_msec, uint32_t button, wlr_button_state state)
-{
-    uint32_t r = wlr_seat_pointer_send_button(grab->seat, time_msec, button, state);
-    /* If this was the last held button, remove grab */
-    if (core->input->cursor->count_pressed_buttons == 0)
-        core->input->cursor->end_held_grab();
-
-    return r;
-}
-
-static void button_held_grab_cancel(wlr_seat_pointer_grab *grab)
-{
-    core->input->cursor->end_held_grab();
-}
-
-static void button_held_grab_axis(wlr_seat_pointer_grab *grab,
-    uint32_t time_msec, wlr_axis_orientation orientation, double value,
-    int32_t value_discrete, wlr_axis_source source)
-{ wlr_seat_pointer_send_axis(grab->seat, time_msec, orientation, value, value_discrete, source); }
-static void button_held_grab_frame(wlr_seat_pointer_grab *grab)
-{ wlr_seat_pointer_send_frame(grab->seat); }
-
-static const wlr_pointer_grab_interface button_held_grab_iface =
-{
-	.enter  = button_held_grab_enter,
-	.motion = button_held_grab_motion,
-	.button = button_held_grab_button,
-	.axis   = button_held_grab_axis,
-	.frame  = button_held_grab_frame,
-	.cancel = button_held_grab_cancel,
-};
-
 void wf_cursor::start_held_grab(wayfire_surface_t *surface)
 {
     grabbed_surface = surface;
-
-    wlr_grab.interface = &button_held_grab_iface;
-    wlr_seat_pointer_start_grab(core->input->seat, &wlr_grab);
 }
 
 void wf_cursor::end_held_grab()
 {
-    grabbed_surface = nullptr;
-    wlr_seat_pointer_end_grab(core->input->seat);
-    core->input->update_cursor_position(get_current_time(), false);
+    if (grabbed_surface)
+    {
+        grabbed_surface = nullptr;
+        core->input->update_cursor_position(get_current_time(), false);
+    }
 }
 
 wf_cursor::~wf_cursor()

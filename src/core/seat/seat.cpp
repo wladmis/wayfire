@@ -29,7 +29,7 @@ static void handle_drag_icon_destroy(wl_listener*, void *)
     /* we don't dec_keep_count() because the surface memory is
      * managed by the unique_ptr */
     core->input->drag_icon = nullptr;
-    core->emit_signal("stop-drag", nullptr);
+    core->emit_signal("drag-stopped", nullptr);
 }
 
 wf_drag_icon::wf_drag_icon(wlr_drag_icon *ic)
