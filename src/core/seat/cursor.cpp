@@ -10,6 +10,11 @@ static void handle_pointer_button_cb(wl_listener*, void *data)
     auto ev = static_cast<wlr_event_pointer_button*> (data);
     if (!core->input->handle_pointer_button(ev))
     {
+        /* start a button held grab, so that the window will receive all the
+         * subsequent events, no matter what happens */
+        if (core->input->cursor->count_pressed_buttons == 1 && core->get_cursor_focus())
+            core->input->cursor->start_held_grab(core->get_cursor_focus());
+
         wlr_seat_pointer_notify_button(core->input->seat, ev->time_msec,
             ev->button, ev->state);
     }
@@ -93,11 +98,13 @@ bool input_manager::handle_pointer_button(wlr_event_pointer_button *ev)
     std::vector<std::function<void()>> callbacks;
     if (ev->state == WLR_BUTTON_PRESSED)
     {
-        count_other_inputs++;
-
-        GetTuple(gx, gy, core->get_cursor_position());
-        auto output = core->get_output_at(gx, gy);
-        core->focus_output(output);
+        cursor->count_pressed_buttons++;
+        if (cursor->count_pressed_buttons == 1)
+        {
+            GetTuple(gx, gy, core->get_cursor_position());
+            auto output = core->get_output_at(gx, gy);
+            core->focus_output(output);
+        }
 
         GetTuple(ox, oy, core->get_active_output()->get_cursor_position());
 
@@ -134,7 +141,7 @@ bool input_manager::handle_pointer_button(wlr_event_pointer_button *ev)
     }
     else
     {
-        count_other_inputs--;
+        cursor->count_pressed_buttons--;
     }
 
     if (active_grab)
@@ -204,7 +211,7 @@ void input_manager::update_cursor_position(uint32_t time_msec, bool real_update)
         wlr_seat_pointer_notify_motion(core->input->seat, time_msec, lx, ly);
     }
 
-    update_drag_icons();
+    update_drag_icon();
 }
 
 void input_manager::handle_pointer_motion(wlr_event_pointer_motion *ev)
@@ -399,6 +406,75 @@ void wf_cursor::set_cursor(wlr_seat_pointer_request_set_cursor_event *ev)
 
     if (client == ev->seat_client->client && !core->input->input_grabbed())
         wlr_cursor_set_surface(cursor, ev->surface, ev->hotspot_x, ev->hotspot_y);
+}
+
+/* When a button is pressed, we start a grab until it is released. This is
+ * needed to ensure that the window will still receive events even if the
+ * pointer goes outside of the window - input-manager will by default send
+ * events directly to the window underneath the cursor.
+ *
+ * This grab ends itself whenever all buttons are released. In addition, the
+ * grab can also be ended if a DnD action starts */
+static void button_held_grab_enter(wlr_seat_pointer_grab *grab,
+    wlr_surface *surface, double sx, double sy)
+{ /* no-op, ignore input-manager trying to change focus */ }
+
+static void button_held_grab_motion(wlr_seat_pointer_grab *grab,
+    uint32_t time_msec, double sx, double sy)
+{
+    auto surface = core->input->cursor->grabbed_surface;
+    GetTuple(px, py, surface->get_output()->get_cursor_position());
+
+    auto local = surface->get_relative_position({px, py});
+    wlr_seat_pointer_send_motion(grab->seat, time_msec, local.x, local.y);
+}
+
+static uint32_t button_held_grab_button(wlr_seat_pointer_grab *grab,
+    uint32_t time_msec, uint32_t button, wlr_button_state state)
+{
+    uint32_t r = wlr_seat_pointer_send_button(grab->seat, time_msec, button, state);
+    /* If this was the last held button, remove grab */
+    if (core->input->cursor->count_pressed_buttons == 0)
+        core->input->cursor->end_held_grab();
+
+    return r;
+}
+
+static void button_held_grab_cancel(wlr_seat_pointer_grab *grab)
+{
+    core->input->cursor->end_held_grab();
+}
+
+static void button_held_grab_axis(wlr_seat_pointer_grab *grab,
+    uint32_t time_msec, wlr_axis_orientation orientation, double value,
+    int32_t value_discrete, wlr_axis_source source)
+{ wlr_seat_pointer_send_axis(grab->seat, time_msec, orientation, value, value_discrete, source); }
+static void button_held_grab_frame(wlr_seat_pointer_grab *grab)
+{ wlr_seat_pointer_send_frame(grab->seat); }
+
+static const wlr_pointer_grab_interface button_held_grab_iface =
+{
+	.enter  = button_held_grab_enter,
+	.motion = button_held_grab_motion,
+	.button = button_held_grab_button,
+	.axis   = button_held_grab_axis,
+	.frame  = button_held_grab_frame,
+	.cancel = button_held_grab_cancel,
+};
+
+void wf_cursor::start_held_grab(wayfire_surface_t *surface)
+{
+    grabbed_surface = surface;
+
+    wlr_grab.interface = &button_held_grab_iface;
+    wlr_seat_pointer_start_grab(core->input->seat, &wlr_grab);
+}
+
+void wf_cursor::end_held_grab()
+{
+    grabbed_surface = nullptr;
+    wlr_seat_pointer_end_grab(core->input->seat);
+    core->input->update_cursor_position(get_current_time(), false);
 }
 
 wf_cursor::~wf_cursor()

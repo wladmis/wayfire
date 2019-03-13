@@ -24,20 +24,12 @@ static void handle_drag_icon_unmap(wl_listener* listener, void *data)
     icon->unmap();
 }
 
-static void handle_drag_icon_destroy(wl_listener* listener, void *data)
+static void handle_drag_icon_destroy(wl_listener*, void *)
 {
-    auto wlr_icon = (wlr_drag_icon*) data;
-    auto icon = (wf_drag_icon*) wlr_icon->data;
-
-    auto it = std::find_if(core->input->drag_icons.begin(),
-                           core->input->drag_icons.end(),
-                           [=] (const std::unique_ptr<wf_drag_icon>& ptr)
-                                {return ptr.get() == icon;});
-
     /* we don't dec_keep_count() because the surface memory is
      * managed by the unique_ptr */
-    assert(it != core->input->drag_icons.end());
-    core->input->drag_icons.erase(it);
+    core->input->drag_icon = nullptr;
+    core->emit_signal("stop-drag", nullptr);
 }
 
 wf_drag_icon::wf_drag_icon(wlr_drag_icon *ic)
@@ -121,9 +113,8 @@ static void handle_request_start_drag_cb(wl_listener*, void *data)
 static void handle_start_drag_cb(wl_listener*, void *data)
 {
     auto d = static_cast<wlr_drag*> (data);
-
-    auto icon = std::unique_ptr<wf_drag_icon>(new wf_drag_icon(d->icon));
-    core->input->drag_icons.push_back(std::move(icon));
+    core->input->drag_icon = std::make_unique<wf_drag_icon> (d->icon);
+    core->emit_signal("drag-started", nullptr);
 }
 
 static void handle_request_set_cursor(wl_listener*, void *data)
@@ -144,13 +135,10 @@ static void handle_request_set_primary_selection_cb(wl_listener*, void *data)
     wlr_seat_set_primary_selection(core->get_current_seat(), ev->source, ev->serial);
 }
 
-void input_manager::update_drag_icons()
+void input_manager::update_drag_icon()
 {
-    for (auto& icon : drag_icons)
-    {
-        if (icon->is_mapped())
-            icon->update_output_position();
-    }
+    if (drag_icon && drag_icon->is_mapped())
+        drag_icon->update_output_position();
 }
 
 void input_manager::create_seat()

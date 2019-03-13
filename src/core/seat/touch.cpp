@@ -323,7 +323,7 @@ void input_manager::handle_touch_down(uint32_t time, int32_t id, int32_t x, int3
     int lx, ly;
     auto focus = input_surface_at(x, y, lx, ly);
     set_touch_focus(focus, time, id, lx, ly);
-    update_drag_icons();
+    update_drag_icon();
 
     check_touch_bindings(ox, oy);
 }
@@ -358,7 +358,7 @@ void input_manager::handle_touch_motion(uint32_t time, int32_t id, int32_t x, in
     set_touch_focus(surface, time, id, lx, ly);
     wlr_seat_touch_notify_motion(seat, time, id, lx, ly);
 
-    update_drag_icons();
+    update_drag_icon();
 
     auto compositor_surface = wf_compositor_surface_from_surface(touch_focus);
     if (id == 0 && compositor_surface)

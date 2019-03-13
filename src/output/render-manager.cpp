@@ -631,16 +631,14 @@ void render_manager::workspace_stream_update(wf_workspace_stream *stream,
     /* we "move" all icons to the current output */
     if (!renderer)
     {
-        for (auto& icon : core->input->drag_icons)
+        if (core->input->drag_icon && core->input->drag_icon->is_mapped())
         {
-            if (!icon->is_mapped())
-                continue;
-
-            icon->set_output(output);
-            icon->for_each_surface([&] (wayfire_surface_t *surface, int x, int y)
-                                   {
-                                       schedule_render_surface(surface, x, y, 0, 0);
-                                   });
+            core->input->drag_icon->set_output(output);
+            core->input->drag_icon->for_each_surface(
+                [&] (wayfire_surface_t *surface, int x, int y)
+                {
+                    schedule_render_surface(surface, x, y, 0, 0);
+                });
         }
     }
 
@@ -710,11 +708,8 @@ void render_manager::workspace_stream_update(wf_workspace_stream *stream,
 
     if (!renderer)
     {
-        for (auto& icon : core->input->drag_icons)
-        {
-            if (icon->is_mapped())
-                icon->set_output(nullptr);
-        }
+        if (core->input->drag_icon && core->input->drag_icon->is_mapped())
+            core->input->drag_icon->set_output(nullptr);
     }
 
     {

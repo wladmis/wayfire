@@ -33,7 +33,8 @@ void wayfire_grab_interface_t::ungrab()
         return;
 
     grabbed = false;
-    core->input->ungrab_input();
+    if (output == core->get_active_output())
+        core->input->ungrab_input();
 }
 
 bool wayfire_grab_interface_t::is_grabbed()

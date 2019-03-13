@@ -119,7 +119,14 @@ input_manager::input_manager()
 
     surface_map_state_changed = [=] (signal_data *data)
     {
-        update_cursor_position(get_current_time(), false);
+        auto ev = static_cast<_surface_map_state_changed_signal*> (data);
+        if (cursor->grabbed_surface == ev->surface && !ev->surface->is_mapped())
+        {
+            cursor->end_held_grab();
+        } else
+        {
+            update_cursor_position(get_current_time(), false);
+        }
 
         if (our_touch)
         {
@@ -168,8 +175,10 @@ bool input_manager::grab_input(wayfire_grab_interface iface)
     assert(!active_grab); // cannot have two active input grabs!
 
     if (our_touch)
+    {
         for (const auto& f : our_touch->gesture_recognizer.current)
             handle_touch_up(0, f.first);
+    }
 
     active_grab = iface;
 

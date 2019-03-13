@@ -86,7 +86,7 @@ class input_manager
 
         void set_touch_focus(wayfire_surface_t *surface, uint32_t time, int id, int lx, int ly);
 
-        void update_drag_icons();
+        void update_drag_icon();
 
         std::vector<std::unique_ptr<wf_keyboard>> keyboards;
         std::vector<std::unique_ptr<wf_input_device>> input_devices;
@@ -95,7 +95,6 @@ class input_manager
          * This might not work with multiple keyboards */
         uint32_t mod_binding_key = 0; /* The keycode which triggered the modifier binding */
         std::chrono::steady_clock::time_point mod_binding_start;
-        int count_other_inputs = 0;
         std::vector<std::function<void()>> match_keys(uint32_t mods, uint32_t key, uint32_t mod_binding_key = 0);
 
         wayfire_view keyboard_focus;
@@ -120,7 +119,7 @@ class input_manager
         signal_callback_t surface_map_state_changed;
 
         std::unique_ptr<wf_touch> our_touch;
-        std::vector<std::unique_ptr<wf_drag_icon>> drag_icons;
+        std::unique_ptr<wf_drag_icon> drag_icon;
 
         int pointer_count = 0, touch_count = 0;
         void update_capabilities();

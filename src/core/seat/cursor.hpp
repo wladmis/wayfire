@@ -2,6 +2,7 @@
 #define CURSOR_HPP
 
 #include "seat.hpp"
+#include "plugin.hpp"
 
 extern "C"
 {
@@ -34,9 +35,15 @@ struct wf_cursor
 
     wlr_cursor *cursor = NULL;
     wlr_xcursor_manager *xcursor = NULL;
+    int count_pressed_buttons = 0;
 
     wf_option mouse_scroll_speed;
     wf_option touchpad_scroll_speed;
+
+    wlr_seat_pointer_grab wlr_grab;
+    wayfire_surface_t *grabbed_surface = nullptr;
+    void start_held_grab(wayfire_surface_t *surface);
+    void end_held_grab();
 };
 
 #endif /* end of include guard: CURSOR_HPP */

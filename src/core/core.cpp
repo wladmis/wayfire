@@ -380,7 +380,6 @@ void wayfire_core::focus_output(wayfire_output *wo)
     }
 
     wayfire_grab_interface iface = wo->get_input_grab_interface();
-
     /* this cannot be recursion as active_output will be equal to wo,
      * and wo->active_view->output == wo */
     if (!iface)
