@@ -374,12 +374,11 @@ wayfire_surface_t *wayfire_view_t::map_input_coordinates(int cx, int cy, int& sx
 
     if (transforms.size())
     {
-        auto box = get_untransformed_bounding_box();
-        transforms.for_each_reverse([&] (auto& transform)
-        {
-            auto p = transform->transform->transformed_to_local_point(box, {cx, cy});
-            cx = p.x; cy = p.y;
-        });
+        auto relative = get_relative_position({cx, cy});
+        auto og = get_output_geometry();
+
+        cx = relative.x + og.x;
+        cy = relative.y + og.y;
     }
 
     for_each_surface(
@@ -689,6 +688,36 @@ void wayfire_view_t::set_decoration(wayfire_surface_t *deco)
         set_geometry(output->workspace->get_workarea());
     if (fullscreen)
         set_geometry(output->get_relative_geometry());
+}
+
+#define INVALID_COORDS(p) (p.x == WF_INVALID_INPUT_COORDINATES || p.y == WF_INVALID_INPUT_COORDINATES)
+wf_point wayfire_view_t::get_relative_position(const wf_point& arg)
+{
+    if (!_is_mapped)
+        return arg;
+
+    wf_point result = arg;
+    if (transforms.size())
+    {
+        auto box = get_untransformed_bounding_box();
+        transforms.for_each_reverse([&] (auto& transform)
+        {
+            if (INVALID_COORDS(result))
+                return;
+
+            result = transform->transform->transformed_to_local_point(box, result);
+            box = transform->transform->get_bounding_box(box, box);
+        });
+
+        if (INVALID_COORDS(result))
+            return result;
+    }
+
+    auto og = get_output_geometry();
+    result.x -= og.x;
+    result.y -= og.y;
+
+    return result;
 }
 
 wf_point wayfire_view_t::get_output_position()

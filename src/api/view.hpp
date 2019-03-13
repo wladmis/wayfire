@@ -117,6 +117,10 @@ class wayfire_surface_t
 
         float alpha = 1.0;
 
+        /* transform arg from output-local point to a point relative to the surface,
+         * after applying all the surface's parents' transforms */
+        virtual wf_point get_relative_position(const wf_point& arg);
+
         /* returns top-left corner in output coordinates */
         virtual wf_point get_output_position();
 
@@ -286,6 +290,7 @@ class wayfire_view_t : public wayfire_surface_t, public wf_object_base
         /* return geometry as should be used for all WM purposes */
         virtual wf_geometry get_wm_geometry();
 
+        virtual wf_point get_relative_position(const wf_point& arg);
         virtual wf_point get_output_position();
 
         /* return the output-local transformed coordinates of the view

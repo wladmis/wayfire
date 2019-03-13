@@ -185,6 +185,26 @@ bool wayfire_surface_t::is_mapped()
     return !destroyed && surface;
 }
 
+wf_point wayfire_surface_t::get_relative_position(const wf_point& arg)
+{
+    if (!is_mapped())
+        return arg;
+
+    wf_point result = arg;
+
+    /* The root of each surface tree is a view */
+    auto view = dynamic_cast<wayfire_view_t*> (get_main_surface());
+    assert(view);
+
+    auto transformed = view->get_relative_position(result);
+
+    auto output_position = get_output_position();
+    auto view_position = view->get_output_position();
+
+    return {transformed.x + view_position.x - output_position.x,
+        transformed.y + view_position.y - output_position.y};
+}
+
 wf_point wayfire_surface_t::get_output_position()
 {
     auto pos = parent_surface->get_output_position();
