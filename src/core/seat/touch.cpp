@@ -39,15 +39,19 @@ void wf_gesture_recognizer::reset_gesture()
     }
 }
 
-void wf_gesture_recognizer::start_new_gesture(int reason_id, int time)
+void wf_gesture_recognizer::start_new_gesture()
 {
     in_gesture = true;
     reset_gesture();
 
-    for (auto &f : current)
+    /* Stop all further events from being sent to clients */
+    for (auto& f : current)
     {
-        if (f.first != reason_id)
-            core->input->handle_touch_up(time, f.first);
+        if (f.second.sent_to_client)
+        {
+            core->input->handle_touch_up(get_current_time(), f.first);
+            f.second.sent_to_client = false;
+        }
     }
 }
 
@@ -171,7 +175,7 @@ void wf_gesture_recognizer::update_touch(int32_t time, int id, int sx, int sy)
     if (in_gesture)
     {
         continue_gesture(id, sx, sy);
-    } else
+    } else if (current[id].sent_to_client)
     {
         core->input->handle_touch_motion(time, id, sx, sy);
     }
@@ -184,10 +188,13 @@ void wf_gesture_recognizer::register_touch(int time, int id, int sx, int sy)
         reset_gesture();
 
     if (current.size() >= MIN_FINGERS && !in_gesture)
-        start_new_gesture(id, time);
+        start_new_gesture();
 
     if (!in_gesture)
+    {
+        current[id].sent_to_client = true;
         core->input->handle_touch_down(time, id, sx, sy);
+    }
 }
 
 void wf_gesture_recognizer::unregister_touch(int32_t time, int32_t id)
@@ -196,7 +203,11 @@ void wf_gesture_recognizer::unregister_touch(int32_t time, int32_t id)
     if (!current.count(id))
         return;
 
+    /* We need to erase the touch point state, because then reset_gesture() can
+     * properly calculate the starting parameters for the next gesture */
+    bool was_sent_to_client = current[id].sent_to_client;
     current.erase(id);
+
     if (in_gesture)
     {
         if (current.size() < MIN_FINGERS)
@@ -204,10 +215,13 @@ void wf_gesture_recognizer::unregister_touch(int32_t time, int32_t id)
         else
             reset_gesture();
     }
-    else
+    else if (was_sent_to_client)
     {
         core->input->handle_touch_up(time, id);
+        current[id].sent_to_client = false;
     }
+
+    current.erase(id);
 }
 
 static void handle_touch_down(wl_listener* listener, void *data)
@@ -320,7 +334,6 @@ void input_manager::handle_touch_down(uint32_t time, int32_t id, int32_t x, int3
 {
     mod_binding_key = 0;
     ++our_touch->count_touch_down;
-
     if (our_touch->count_touch_down == 1)
         core->focus_output(core->get_output_at(x, y));
 
@@ -406,7 +419,7 @@ void input_manager::handle_touch_motion(uint32_t time, int32_t id, int32_t x, in
     wlr_seat_touch_notify_motion(seat, time, id, lx, ly);
     update_drag_icon();
 
-    auto compositor_surface = wf_compositor_surface_from_surface(touch_focus);
+    auto compositor_surface = wf_compositor_surface_from_surface(surface);
     if (id == 0 && compositor_surface)
         compositor_surface->on_touch_motion(lx, ly);
 }
@@ -464,3 +477,8 @@ void input_manager::handle_gesture(wf_touch_gesture g)
         call();
 }
 
+void wf_touch::input_grabbed()
+{
+    for (auto& f : gesture_recognizer.current)
+        core->input->set_touch_focus(nullptr, get_current_time(), f.first, 0, 0);
+}

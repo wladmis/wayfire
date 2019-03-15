@@ -84,8 +84,6 @@ class input_manager
         wayfire_surface_t* input_surface_at(int x, int y,
             int& lx, int& ly);
 
-        void set_touch_focus(wayfire_surface_t *surface, uint32_t time, int id, int lx, int ly);
-
         void update_drag_icon();
 
         std::vector<std::unique_ptr<wf_keyboard>> keyboards;
@@ -109,6 +107,7 @@ class input_manager
 
         void update_cursor_position(uint32_t time_msec, bool real_update = true);
         void update_cursor_focus(wayfire_surface_t *surface, int lx, int ly);
+        void set_touch_focus(wayfire_surface_t *surface, uint32_t time, int id, int lx, int ly);
 
         wl_client *exclusive_client = NULL;
 

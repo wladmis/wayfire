@@ -178,10 +178,7 @@ bool input_manager::grab_input(wayfire_grab_interface iface)
     assert(!active_grab); // cannot have two active input grabs!
 
     if (our_touch)
-    {
-        for (const auto& f : our_touch->gesture_recognizer.current)
-            handle_touch_up(0, f.first);
-    }
+        our_touch->input_grabbed();
 
     active_grab = iface;
 
