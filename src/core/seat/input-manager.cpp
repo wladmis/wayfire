@@ -120,7 +120,7 @@ input_manager::input_manager()
     surface_map_state_changed = [=] (signal_data *data)
     {
         auto ev = static_cast<_surface_map_state_changed_signal*> (data);
-        if (cursor->grabbed_surface == ev->surface && !ev->surface->is_mapped())
+        if (ev && cursor->grabbed_surface == ev->surface && !ev->surface->is_mapped())
         {
             cursor->end_held_grab();
         } else
@@ -130,7 +130,7 @@ input_manager::input_manager()
 
         if (our_touch)
         {
-            if (our_touch->grabbed_surface == ev->surface && !ev->surface->is_mapped())
+            if (ev && our_touch->grabbed_surface == ev->surface && !ev->surface->is_mapped())
                 our_touch->end_touch_down_grab();
 
             for (auto f : our_touch->gesture_recognizer.current)
