@@ -18,6 +18,11 @@ static void handle_pointer_button_cb(wl_listener*, void *data)
 
         wlr_seat_pointer_notify_button(core->input->seat, ev->time_msec,
             ev->button, ev->state);
+
+        /* end the button held grab. We need to to this here after we have send
+         * the last button release event, so that buttons don't get stuck in clients */
+        if (core->input->cursor->count_pressed_buttons == 0)
+            core->input->cursor->end_held_grab();
     }
 
     wlr_idle_notify_activity(core->protocols.idle, core->get_current_seat());
@@ -143,8 +148,6 @@ bool input_manager::handle_pointer_button(wlr_event_pointer_button *ev)
     else
     {
         cursor->count_pressed_buttons--;
-        if (cursor->count_pressed_buttons == 0)
-            cursor->end_held_grab();
     }
 
     if (active_grab)

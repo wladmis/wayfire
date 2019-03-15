@@ -362,18 +362,15 @@ void input_manager::handle_touch_down(uint32_t time, int32_t id, int32_t x, int3
 void input_manager::handle_touch_up(uint32_t time, int32_t id)
 {
     --our_touch->count_touch_down;
-    if (our_touch->count_touch_down == 0)
-        our_touch->end_touch_down_grab();
-
     if (active_grab)
     {
         if (active_grab->callbacks.touch.up)
             active_grab->callbacks.touch.up(id);
-
-        return;
     }
 
     set_touch_focus(nullptr, time, id, 0, 0);
+    if (our_touch->count_touch_down == 0)
+        our_touch->end_touch_down_grab();
 }
 
 void input_manager::handle_touch_motion(uint32_t time, int32_t id, int32_t x, int32_t y)
