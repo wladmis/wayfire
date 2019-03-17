@@ -3,6 +3,7 @@
 
 #define INSTALL_PREFIX "@INSTALL_PREFIX@"
 #define WF_SRC_DIR "@WF_SRC_DIR@"
+#define SYSCONFDIR "@SYSCONFDIR@"
 #mesondefine BUILD_WITH_IMAGEIO
 #mesondefine WAYFIRE_DEBUG_ENABLED
 #mesondefine USE_GLES32

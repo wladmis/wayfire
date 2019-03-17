@@ -7,11 +7,15 @@ project(
 	meson_version: '>=0.43.0',
 	default_options: [
 		'cpp_std=c++14',
-        'c_std=c11',
+		'c_std=c11',
 		'warning_level=2',
 		'werror=false',
+		'sysconfdir=/etc',
 	],
 )
+
+prefixdir=get_option('prefix')
+sysconfdir=join_paths(prefixdir, get_option('sysconfdir'))
 
 so_version = ['0', '1', '0']
 wayfire_api_inc  = include_directories('src/api')
@@ -47,6 +51,7 @@ conf_data = configuration_data()
 
 conf_data.set('WF_SRC_DIR', meson.source_root())
 conf_data.set('INSTALL_PREFIX', get_option('prefix'))
+conf_data.set('SYSCONFDIR', get_option('sysconfdir'))
 
 # needed to dlopen() plugins
 add_project_arguments(['-DWLR_USE_UNSTABLE'], language: ['cpp', 'c'])
@@ -90,6 +95,8 @@ subdir('src')
 subdir('plugins')
 
 install_subdir('shaders', install_dir: 'share/wayfire')
+install_data('wayfire.ini.default', rename: 'wayfire.ini',
+               install_dir: join_paths(sysconfdir, 'wayfire'))
 
 summary = [
 	'',

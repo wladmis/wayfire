@@ -155,11 +155,17 @@ int main(int argc, char *argv[])
 #else
     wlr_log_init(WLR_ERROR, NULL);
 #endif
+    const char *config_basename = "wayfire.ini";
 
     std::string config_dir = nonull(getenv("XDG_CONFIG_DIR"));
     if (!config_dir.compare("nil"))
         config_dir = std::string(nonull(getenv("HOME"))) + "/.config/";
-    config_file = config_dir + "wayfire.ini";
+    config_file = config_dir + config_basename;
+
+    /* use system-wide config file if local is not accessible */
+    /* FIXME: there can be a race */
+    if (access(config_file.c_str(), F_OK) == -1)
+        config_file = std::string(SYSCONFDIR "/wayfire/") + config_basename;
 
     struct option opts[] = {
         { "config",          required_argument, NULL, 'c' },
