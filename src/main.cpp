@@ -159,8 +159,8 @@ int main(int argc, char *argv[])
 
     std::string config_dir = nonull(getenv("XDG_CONFIG_DIR"));
     if (!config_dir.compare("nil"))
-        config_dir = std::string(nonull(getenv("HOME"))) + "/.config/";
-    config_file = config_dir + config_basename;
+        config_dir = std::string(nonull(getenv("HOME"))) + "/.config";
+    config_file = config_dir + "/" + config_basename;
 
     /* use system-wide config file if local is not accessible */
     /* FIXME: there can be a race */
